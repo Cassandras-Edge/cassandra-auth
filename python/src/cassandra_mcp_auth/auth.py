@@ -1,0 +1,89 @@
+"""Custom FastMCP AuthProvider that validates MCP API keys via the ACL service."""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass
+
+import httpx
+from fastmcp.server.auth import AccessToken, AuthProvider
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class McpKeyInfo:
+    """Resolved info from a validated MCP API key."""
+
+    email: str
+    service: str
+    credentials: dict[str, str] | None
+
+
+class McpKeyAuthProvider(AuthProvider):
+    """Validates `mcp_` bearer tokens by calling the ACL service's /keys/validate endpoint.
+
+    Returns an AccessToken with the user's email in claims so tools can access it
+    via CurrentAccessToken().
+    """
+
+    def __init__(self, *, acl_url: str, acl_secret: str, service_id: str = "yt-mcp") -> None:
+        self._acl_url = acl_url.rstrip("/")
+        self._acl_secret = acl_secret
+        self._service_id = service_id
+        self._client = httpx.Client(timeout=10)
+
+    def verify_token(self, token: str) -> AccessToken | None:
+        """Validate a bearer token. Only accepts mcp_ prefixed keys."""
+        if not token.startswith("mcp_"):
+            logger.debug("Rejecting non-mcp_ token")
+            return None
+
+        try:
+            resp = self._client.post(
+                f"{self._acl_url}/keys/validate",
+                json={"key": token},
+                headers={
+                    "X-ACL-Secret": self._acl_secret,
+                    "Content-Type": "application/json",
+                },
+            )
+
+            if resp.status_code != 200:
+                logger.warning("Key validation failed: status %d", resp.status_code)
+                return None
+
+            data = resp.json()
+            if not data.get("valid"):
+                return None
+
+            # Enforce service scope — a yt-mcp key shouldn't work on other services
+            if data.get("service") != self._service_id:
+                logger.warning(
+                    "Key service mismatch: expected %s, got %s",
+                    self._service_id,
+                    data.get("service"),
+                )
+                return None
+
+            email = data.get("email", "")
+            credentials = data.get("credentials") or {}
+
+            return AccessToken(
+                token=token,
+                client_id=email,
+                scopes=["mcp"],
+                expires_at=None,
+                claims={
+                    "email": email,
+                    "service": self._service_id,
+                    "credentials": credentials,
+                },
+            )
+
+        except httpx.HTTPError:
+            logger.exception("Failed to validate MCP key against ACL service")
+            return None
+
+    def close(self) -> None:
+        self._client.close()
