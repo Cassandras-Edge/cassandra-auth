@@ -27,13 +27,21 @@ class McpKeyAuthProvider(AuthProvider):
     via CurrentAccessToken().
     """
 
-    def __init__(self, *, acl_url: str, acl_secret: str, service_id: str = "yt-mcp") -> None:
+    def __init__(
+        self,
+        *,
+        acl_url: str,
+        acl_secret: str,
+        service_id: str = "yt-mcp",
+        base_url: str | None = None,
+    ) -> None:
+        super().__init__(base_url=base_url)
         self._auth_url = acl_url.rstrip("/")
         self._auth_secret = acl_secret
         self._service_id = service_id
         self._client = httpx.Client(timeout=10)
 
-    def verify_token(self, token: str) -> AccessToken | None:
+    async def verify_token(self, token: str) -> AccessToken | None:
         """Validate a bearer token. Only accepts mcp_ prefixed keys."""
         if not token.startswith("mcp_"):
             logger.debug("Rejecting non-mcp_ token")

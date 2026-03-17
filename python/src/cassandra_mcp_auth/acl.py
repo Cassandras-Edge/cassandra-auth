@@ -1,4 +1,4 @@
-"""Python port of the Casbin-compatible ACL enforcer from cassandra-acl."""
+"""Python port of the Casbin-compatible ACL enforcer from cassandra-auth."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ class CheckResponse:
 
 
 class Enforcer:
-    """Lightweight Casbin-compatible enforcer. Mirrors cassandra-acl/worker/src/enforcer.ts."""
+    """Lightweight Casbin-compatible enforcer. Mirrors cassandra-auth/worker/src/enforcer.ts."""
 
     def __init__(self, policies: list[PolicyLine]) -> None:
         self._policies: list[PolicyLine] = []
@@ -99,7 +99,7 @@ class Enforcer:
 
 
 # ---------------------------------------------------------------------------
-# YAML → PolicyLine parser (mirrors cassandra-acl/worker/src/policy.ts)
+# YAML → PolicyLine parser (mirrors cassandra-auth/worker/src/policy.ts)
 # ---------------------------------------------------------------------------
 
 

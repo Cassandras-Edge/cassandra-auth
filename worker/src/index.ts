@@ -182,6 +182,40 @@ app.get("/acl/whoami", async (c) => {
   });
 });
 
+// ── POST /acl/register — auto-register user on first sign-in ──
+// If user doesn't exist in config, creates them with domain-inherited groups.
+// Returns the user entry (existing or new). Does NOT require admin.
+app.post("/acl/register", async (c) => {
+  if (!requireAuth(c)) return c.json({ error: "unauthorized" }, 401);
+
+  const email = getAdminEmail(c);
+  if (!email) return c.json({ error: "X-Admin-Email header required" }, 400);
+
+  const config = await getConfig(c.env.AUTH_CREDENTIALS);
+  const existing = config.users?.[email];
+
+  if (existing) {
+    return c.json({ email, user: existing, created: false });
+  }
+
+  // Auto-register: inherit groups from domain rule
+  const domain = email.split("@")[1];
+  const domainDef = config.domains?.[domain];
+  const groups = domainDef?.groups || [];
+
+  const newUser: AclUser = { role: "user" };
+  if (groups.length > 0) newUser.groups = [...groups];
+
+  const updated: AclConfig = {
+    ...config,
+    users: { ...config.users, [email]: newUser },
+  };
+  await saveConfigToKV(c.env.AUTH_CREDENTIALS, updated);
+  rebuildEnforcer(updated);
+
+  return c.json({ email, user: newUser, created: true });
+});
+
 // ── All remaining /acl/* endpoints require admin ──
 
 // GET /acl/policy
