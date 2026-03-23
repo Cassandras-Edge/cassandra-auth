@@ -7,7 +7,7 @@ steps:
     image: ghcr.io/astral-sh/uv:python3.13-alpine
     commands:
       - cd service
-      - uv sync
+      - uv sync --extra dev
       - uv run pytest -v
     when:
       event: [push, pull_request]
