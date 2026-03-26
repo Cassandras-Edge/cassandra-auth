@@ -23,7 +23,7 @@ steps:
           --local context=service \
           --local dockerfile=service \
           --opt build-arg:AUTH_YAML_CONTENT="$AUTH_YAML_CONTENT" \
-          --output type=image,name=172.20.0.161:30500/cassandra-auth:latest,push=true,registry.insecure=true
+          --output type=image,name=registry.infra.svc.cluster.local:5000/cassandra-auth:latest,push=true,registry.insecure=true
     environment:
       AUTH_YAML_CONTENT:
         from_secret: auth_yaml
