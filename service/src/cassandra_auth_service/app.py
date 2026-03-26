@@ -172,16 +172,11 @@ def create_app() -> FastAPI:
         if not row:
             return JSONResponse({"valid": False}, status_code=404)
 
-        svc_row = await state.db.fetchone(
-            "SELECT credentials_json FROM service_credentials WHERE service = ?",
-            (row["service"],),
-        )
         return {
             "valid": True,
             "email": row["created_by"],
             "service": row["service"],
             "credentials": json.loads(row["credentials_json"]) if row["credentials_json"] else None,
-            "serviceCredentials": json.loads(svc_row["credentials_json"]) if svc_row else None,
         }
 
     @app.put("/keys/{key_id}", dependencies=[Depends(require_auth)])

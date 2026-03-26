@@ -76,7 +76,6 @@ class McpKeyAuthProvider(AuthProvider):
 
             email = data.get("email", "")
             credentials = data.get("credentials") or {}
-            service_credentials = data.get("serviceCredentials") or {}
 
             return AccessToken(
                 token=token,
@@ -87,7 +86,6 @@ class McpKeyAuthProvider(AuthProvider):
                     "email": email,
                     "service": self._service_id,
                     "credentials": credentials,
-                    "service_credentials": service_credentials,
                 },
             )
 
