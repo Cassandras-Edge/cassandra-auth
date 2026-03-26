@@ -44,6 +44,8 @@ class Enforcer:
         queue = [sub]
 
         # Domain-based role: user@example.com → domain:example.com
+        if sub is None:
+            return sub == role
         at_idx = sub.find("@")
         if at_idx != -1:
             queue.append(f"domain:{sub[at_idx + 1:]}")

@@ -124,6 +124,7 @@ def build_auth(
         client_secret=workos_client_secret,
         authkit_domain=workos_authkit_domain,
         base_url=base_url,
+        required_scopes=["openid", "profile", "email"],
         require_authorization_consent=False,
     )
 
