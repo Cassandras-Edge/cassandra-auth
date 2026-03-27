@@ -81,7 +81,7 @@ class McpKeyAuthProvider(TokenVerifier):
             return AccessToken(
                 token=token,
                 client_id=email,
-                scopes=["mcp"],
+                scopes=["openid", "profile", "email", "mcp"],
                 expires_at=None,
                 claims={
                     "email": email,
