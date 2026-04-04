@@ -1,4 +1,4 @@
-"""Custom FastMCP auth: MCP API key validation + WorkOS OAuth proxy via MultiAuth."""
+"""Custom FastMCP auth: MCP API key validation + WorkOS AuthKit DCR via MultiAuth."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import httpx
 from fastmcp.server.auth import AccessToken, AuthProvider, MultiAuth, TokenVerifier
-from fastmcp.server.auth.providers.workos import WorkOSProvider
+from fastmcp.server.auth.providers.workos import AuthKitProvider
 
 logger = logging.getLogger(__name__)
 
@@ -105,10 +105,15 @@ def build_auth(
     service_id: str,
     base_url: str,
     workos_client_id: str,
-    workos_client_secret: str,
     workos_authkit_domain: str,
+    # Deprecated — ignored, kept for call-site compat during rollout
+    workos_client_secret: str = "",
 ) -> tuple[AuthProvider, McpKeyAuthProvider]:
-    """Build a MultiAuth provider combining WorkOS OAuth (for claude.ai) and MCP key auth.
+    """Build a MultiAuth provider combining WorkOS AuthKit DCR (for claude.ai) and MCP key auth.
+
+    Uses AuthKitProvider (Remote OAuth / DCR) instead of OAuthProxy. WorkOS handles
+    the full OAuth flow directly — no proxy state, no storage, no token refresh on
+    our side. Tokens are WorkOS-issued JWTs verified via JWKS.
 
     Returns (auth_provider, mcp_key_provider) — caller needs mcp_key_provider
     to call .close() on shutdown.
@@ -119,18 +124,14 @@ def build_auth(
         service_id=service_id,
     )
 
-    workos_provider = WorkOSProvider(
-        client_id=workos_client_id,
-        client_secret=workos_client_secret,
+    authkit_provider = AuthKitProvider(
         authkit_domain=workos_authkit_domain,
         base_url=base_url,
-        required_scopes=["openid", "profile", "email"],
-        require_authorization_consent=False,
-        allowed_client_redirect_uris=["http://localhost:*", "http://127.0.0.1:*", "https://claude.ai/*"],
+        client_id=workos_client_id,
     )
 
     auth = MultiAuth(
-        server=workos_provider,
+        server=authkit_provider,
         verifiers=[mcp_key_provider],
     )
 
